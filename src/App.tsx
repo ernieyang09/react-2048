@@ -1,9 +1,9 @@
-import { useState } from 'react'
 import { styled } from '@linaria/react'
 
 import { useGame } from './hooks'
 import Grid from './components/Grid'
 import Tile from './components/Tile'
+import { useEffect } from 'react';
 
 export const mobile = `
   @media screen and (max-width: 520px) {
@@ -31,7 +31,11 @@ const Test = styled.div`
 
 function App() {
 
-  const { tiles } = useGame()
+  const { tiles, start } = useGame()
+
+  useEffect(()=> {
+    start()
+  }, [])
 
   return (
     <Test>
@@ -40,8 +44,8 @@ function App() {
         <div style={{ position: 'relative' }}>
           <Grid />
           {
-            tiles.map((tile) => (
-              <Tile key={tile.id} number={tile.value} X={tile.x} Y={tile.y} />
+            Object.entries(tiles).map(([key, tile]) => (
+              <Tile key={key} number={tile.value} X={tile.x} Y={tile.y} update={tile.update} />
             ))
           }
           {/* <Tile number={4} X={0} Y={1} />

@@ -1,4 +1,4 @@
-import { ROW, COL } from '../constant'
+import { ROW, COL } from '@/constants'
 import { styled } from '@linaria/react'
 
 
