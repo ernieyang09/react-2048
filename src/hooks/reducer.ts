@@ -1,62 +1,39 @@
-import { Tile, NUM2048 } from '@/types/Tile'
+import { Tile } from '@/types/Tile'
 let idx = 99
-
-const defaultTile = {
-  // 0: {
-  //   id: 0,
-  //   value: 2 as const,
-  //   x: 0,
-  //   y: 0,
-  //   update: undefined,
-  // },
-  // 1: {
-  //   id: 1,
-  //   value: 2 as const,
-  //   x: 0,
-  //   y: 1,
-  //   update: undefined,
-  // },
-  // 2: {
-  //   id: 2,
-  //   value: 4 as const,
-  //   x: 3,
-  //   y: 0,
-  //   update: undefined,
-  // },
-  // 3: {
-  //   id: 3,
-  //   value: 4 as const,
-  //   x: 0,
-  //   y: 2,
-  //   update: undefined,
-  // },
-  // 4: {
-  //   id: 4,
-  //   value: 4 as const, 
-  //   x: 0,
-  //   y: 3,
-  //   update: undefined,
-  // }
-}
 
 interface IState {
   tiles: {
     [id: number]: Tile
   }
-  isMove: boolean;
+  stateChanging: boolean;
 }
 
 export const initState: IState = {
-  tiles: defaultTile,
-  isMove: false,
+  tiles: {},
+  stateChanging: false,
 }
 
 type ACTION_MOVE_TILE = { type: 'MOVE_TILE', payload: { [id: number]: Tile } }
 type ACTION_CREATE_TILE = { type: 'CREATE_TILE' }
 type ACTION_UPDATE_TILE = { type: 'UPDATE_TILE' }
+type ACTION_START_MOVE = { type: 'START_MOVE' }
+type ACTION_END_MOVE = { type: 'END_MOVE' }
+type ACTION_EMPTY_BOARD = { type: 'EMPTY_BOARD' }
 
 
-export type TypeAction = ACTION_MOVE_TILE | ACTION_CREATE_TILE | ACTION_UPDATE_TILE
+export type TypeAction = ACTION_MOVE_TILE | ACTION_CREATE_TILE | ACTION_UPDATE_TILE | ACTION_START_MOVE | ACTION_END_MOVE | ACTION_EMPTY_BOARD
+
+
+// class GAME2048 {
+//   tiles
+//   stateChanging
+//   constructor(state: IState) {
+//     this.tiles = state.tiles
+//     this.stateChanging = state.stateChanging
+//   }
+
+
+// }
 
 
 
@@ -86,13 +63,24 @@ const createTile = (tiles) => {
 // TODO optimize move function(extract)
 export const reducer = (state: IState, action: TypeAction): IState => {
   switch(action.type) {
+    case "START_MOVE": {
+      return {
+        ...state,
+        stateChanging: true,
+      }
+    }
+    case "END_MOVE": {
+      return {
+        ...state,
+        stateChanging: false,
+      }
+    }
     case "MOVE_TILE": {
-      const updatedTiles = action.payload
+      const tiles = action.payload
       return {
         ...state,
         tiles: {
-          ...state.tiles,
-          ...updatedTiles,
+          ...tiles,
         }
       }
     }
@@ -107,6 +95,11 @@ export const reducer = (state: IState, action: TypeAction): IState => {
           ...state.tiles,
           ...(tile && { [tile.id]: tile }),
         }
+      }
+    }
+    case "EMPTY_BOARD": {
+      return {
+        ...initState,
       }
     }
     case "UPDATE_TILE": {

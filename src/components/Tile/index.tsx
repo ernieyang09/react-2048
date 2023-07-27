@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 
 type NUM2048 = 2 | 4 | 8 | 16 | 32 | 64 | 128 | 256 | 512 | 1024 | 2048;
 
-const STile = styled.div<{ number: NUM2048, merge: boolean }>`
+const STile = styled.div<{ number: NUM2048, update: undefined | "value" | "delete" }>`
   background: #f8ffe5;
   width: 113px;
   height: 113px;
@@ -18,9 +18,9 @@ const STile = styled.div<{ number: NUM2048, merge: boolean }>`
   position: absolute;
   top: 0;
   left: 0;
-  z-index: ${({ merge }) => merge ? 3 : 2};
+  z-index: ${({ update }) => update === 'value' ? 3 : 2};
   transition-property: transform;
-  transition-duration: 250ms;
+  transition-duration: 125ms;
   animation-timing-function: ease-in-out;
 
 
@@ -45,7 +45,7 @@ interface TileProps {
   number: NUM2048
   X: number;
   Y: number;
-  update: false | "value" | "delete";
+  update?: "value" | "delete";
 }
 
 const Tile: React.FC<TileProps> = ({ number, X, Y, update }) => {
@@ -56,7 +56,7 @@ const Tile: React.FC<TileProps> = ({ number, X, Y, update }) => {
     setChanged(true)
     setTimeout(()=> {
       setChanged(false)
-    }, 250)
+    }, 125)
   }, [number])
 
 

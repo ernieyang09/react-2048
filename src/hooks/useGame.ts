@@ -1,18 +1,107 @@
-import { useState, useEffect, useReducer, useCallback } from "react"
+// import { throttle } from 'lodash'
+import { useState, useEffect, useReducer, useCallback, useRef } from "react"
 import { reducer, initState } from "./reducer";
 
+const freshNow = (tiles) => {
+  const  newBoard = Object.keys(tiles).reduce((a, key)=> {
+    const tile = tiles[key]
+    if (tile.update === 'delete') {
+      return a
+    }
+    if (tile.update === 'value') {
+      return { ...a, [key]: {...tile, value: tile.value * 2, update: undefined } }
+    }
+    return { ...a, [key]: {...tile} }
+  }, {})
+  
 
+  return newBoard
+}
+
+const debug = (tiles) => {
+  const set = new Set([...Array(16).keys()])
+  // console.log(tiles)
+  for (const tile of Object.values(tiles)) {
+    if (!set.has(tile.x * 4 + tile.y)) {
+      if (tile.update ==='delete') {
+        continue
+      }
+      console.log(tiles)
+      console.log(tile.x, tile.y)
+      throw 123
+    }
+    if (tile.update !=='delete') {
+      set.delete(tile.x * 4 + tile.y)
+    }
+  }
+
+}
+
+const check = (tiles) => {
+  const tileMap = Array(16).fill(0)
+  const currentBoard = Object.values(tiles)
+  if (currentBoard.length !== 16) {
+    return false
+  }
+  for (const tile of currentBoard) {
+    const { x, y } = tile
+    tileMap[x * 4 + y] = tile
+  }
+  for (let i = 0; i < 4; i++) {
+    for (let j = i + 1; j < 4; j++) {
+      if (tileMap[i * 4 + j].value === tileMap[i * 4 + j - 1].value) {
+        return false
+      }
+    }
+    for (let j = i + 1; j < 4; j++) {
+      if (tileMap[i + j * 4].value === tileMap[i + j * 4 - 4].value) {
+        return false
+      }
+    }
+  }
+
+  for (let i = 3; i > -1; i--) {
+    for (let j = i - 1; j > -1; j--) {
+      if (tileMap[i * 4 + j].value === tileMap[i * 4 + j + 1].value) {
+        return false
+      }
+    }
+    for (let j = i - 1; j > -1; j--) {
+      if (tileMap[i + j * 4].value === tileMap[i + j * 4 + 4].value) {
+        return false
+      }
+    }
+  }
+  return true
+}
 
 const useGame = () => {
 
   const [state, dispatch] = useReducer(reducer, initState);
+  const { tiles, stateChanging } = state
+  const boardRef = useRef(tiles)
 
-  const { tiles } = state
 
+  const score = Object.values(tiles).reduce((s, c) => s + c.value , 0)
+
+
+  const gameOver = stateChanging ? false : check(tiles)
+  // debug(tiles)
   // const [tiles, setTiles] = useState(x)
 
+
+  useEffect(()=> {
+    boardRef.current = tiles
+  }, [tiles])
+
   const moveUp = useCallback(() => {
-    const updated = {}
+    // if (stateChanging) {
+    //   return
+    // }
+    // console.log('up', tiles)
+
+    dispatch({ type: 'START_MOVE' })
+    const updated = freshNow(tiles)
 
     const checkFreeSlot = (x, y, rowArr) => {
       let newX = x
@@ -28,7 +117,7 @@ const useGame = () => {
     }
 
     const tileMap = Array(16).fill(0)
-    for (const tile of Object.values(tiles)) {
+    for (const tile of Object.values(updated)) {
       const { x, y } = tile
       tileMap[x * 4 + y] = tile
     }
@@ -52,9 +141,14 @@ const useGame = () => {
           prevTile.update = "value"
           currentTile.update = "delete"
 
-          updated[currentTile.id] = currentTile
+          updated[currentTile.id] = { ...currentTile }
+          updated[prevTile.id] = prevTile
           rowArr[j] = 0
 
+        }
+
+        if (currentTile.update === 'delete') {
+          continue
         }
 
         const position = checkFreeSlot(currentTile.x, currentTile.y, rowArr)
@@ -62,7 +156,7 @@ const useGame = () => {
         if (position[0] != currentTile.x || position[1] != currentTile.y) {
           currentTile.x = position[0]
           currentTile.y = position[1]
-          updated[currentTile.id] = currentTile
+          updated[currentTile.id] = { ...currentTile }
         }
 
         prevTile = currentTile
@@ -74,15 +168,21 @@ const useGame = () => {
 
       setTimeout(() => {
         dispatch({ type: 'UPDATE_TILE' })
-      }, 250)
+        dispatch({ type: 'END_MOVE' })
+      }, 125)
+    } else {
+      dispatch({ type: 'END_MOVE' })
     }
 
-    // setTiles([...tiles])
-    // console.log(tileMap)
   }, [tiles])
 
   const moveDown = useCallback(() => {
-    const updated = {}
+    // if (stateChanging) {
+    //   return
+    // }
+    // console.log('down', tiles)
+    dispatch({ type: 'START_MOVE' })
+    const updated = freshNow(tiles)
 
     const checkFreeSlot = (x, y, rowArr) => {
       let newX = x
@@ -98,7 +198,7 @@ const useGame = () => {
     }
 
     const tileMap = Array(16).fill(0)
-    for (const tile of Object.values(tiles)) {
+    for (const tile of Object.values(updated)) {
       const { x, y } = tile
       tileMap[x * 4 + y] = tile
     }
@@ -122,9 +222,14 @@ const useGame = () => {
           prevTile.update = "value"
           currentTile.update = "delete"
 
-          updated[currentTile.id] = currentTile
+          updated[currentTile.id] = { ...currentTile }
+          updated[prevTile.id] = prevTile
           rowArr[j] = 0
 
+        }
+
+        if (currentTile.update === 'delete') {
+          continue
         }
 
         const position = checkFreeSlot(currentTile.x, currentTile.y, rowArr)
@@ -132,19 +237,25 @@ const useGame = () => {
         if (position[0] != currentTile.x || position[1] != currentTile.y) {
           currentTile.x = position[0]
           currentTile.y = position[1]
-          updated[currentTile.id] = currentTile
+          updated[currentTile.id] = { ...currentTile }
         }
 
         prevTile = currentTile
       }
     }
+    
+
+    // console.log(updated)
 
     if (Object.keys(updated).length) {
       dispatch({ type: 'MOVE_TILE', payload: updated })
 
       setTimeout(() => {
         dispatch({ type: 'UPDATE_TILE' })
-      }, 250)
+        dispatch({ type: 'END_MOVE' })
+      }, 125)
+    } else {
+      dispatch({ type: 'END_MOVE' })
     }
 
     // setTiles([...tiles])
@@ -152,7 +263,12 @@ const useGame = () => {
   }, [tiles])
 
   const moveRight = useCallback(() => {
-    const updated = {}
+    // if (stateChanging) {
+    //   return
+    // }
+    // console.log('right', tiles)
+    dispatch({ type: 'START_MOVE' })
+    const updated = freshNow(tiles)
 
     const checkFreeSlot = (x, y, rowArr) => {
       let newY = y
@@ -168,7 +284,7 @@ const useGame = () => {
     }
 
     const tileMap = Array(16).fill(0)
-    for (const tile of Object.values(tiles)) {
+    for (const tile of Object.values(updated)) {
       const { x, y } = tile
       tileMap[x * 4 + y] = tile
     }
@@ -181,15 +297,19 @@ const useGame = () => {
           continue
         }
         if (prevTile && prevTile.update !== 'delete' && prevTile.value === currentTile.value) {
-
           currentTile.x = prevTile.x
           currentTile.y = prevTile.y
           prevTile.update = "value"
           currentTile.update = "delete"
 
-          updated[currentTile.id] = currentTile
+          updated[currentTile.id] = { ...currentTile }
+          updated[prevTile.id] = prevTile
           rowArr[j] = 0
 
+        }
+
+        if (currentTile.update === 'delete') {
+          continue
         }
 
         const position = checkFreeSlot(currentTile.x, currentTile.y, rowArr)
@@ -197,7 +317,7 @@ const useGame = () => {
         if (position[0] != currentTile.x || position[1] != currentTile.y) {
           currentTile.x = position[0]
           currentTile.y = position[1]
-          updated[currentTile.id] = currentTile
+          updated[currentTile.id] = { ...currentTile }
         }
 
         prevTile = currentTile
@@ -209,7 +329,10 @@ const useGame = () => {
 
       setTimeout(() => {
         dispatch({ type: 'UPDATE_TILE' })
-      }, 250)
+        dispatch({ type: 'END_MOVE' })
+      }, 125)
+    } else {
+      dispatch({ type: 'END_MOVE' })
     }
 
     // setTiles([...tiles])
@@ -217,7 +340,12 @@ const useGame = () => {
   }, [tiles])
 
   const moveLeft = useCallback(() => {
-    const updated = {}
+    // if (stateChanging) {
+    //   return
+    // }
+    // console.log('left', tiles)
+    dispatch({ type: 'START_MOVE' })
+    const updated = freshNow(tiles)
 
     const checkFreeSlot = (x, y, rowArr) => {
       let newY = y
@@ -233,14 +361,13 @@ const useGame = () => {
     }
 
     const tileMap = Array(16).fill(0)
-    for (const tile of Object.values(tiles)) {
+    for (const tile of Object.values(updated)) {
       const { x, y } = tile
       tileMap[x * 4 + y] = tile
     }
     for (let i = 0; i < 4; i++) {
       let prevTile
       const rowArr = tileMap.slice(i * 4, i * 4 + 4)
-      // console.log(red)
       for (let j = 0; j < 4; j++) {
         const currentTile = tileMap[i * 4 + j]
         if (currentTile == 0) {
@@ -253,7 +380,8 @@ const useGame = () => {
           prevTile.update = "value"
           currentTile.update = "delete"
 
-          updated[currentTile.id] = currentTile
+          updated[currentTile.id] = { ...currentTile }
+          updated[prevTile.id] = prevTile
           rowArr[j] = 0
 
           // dispatch({ type: 'MERGE_TILE', payload: {
@@ -263,13 +391,17 @@ const useGame = () => {
 
         }
 
+        if (currentTile.update === 'delete') {
+          continue
+        }
+
 
         const position = checkFreeSlot(currentTile.x, currentTile.y, rowArr)
 
         if (position[0] != currentTile.x || position[1] != currentTile.y) {
           currentTile.x = position[0]
           currentTile.y = position[1]
-          updated[currentTile.id] = currentTile
+          updated[currentTile.id] = { ...currentTile }
         }
 
         prevTile = currentTile
@@ -281,14 +413,18 @@ const useGame = () => {
 
       setTimeout(() => {
         dispatch({ type: 'UPDATE_TILE' })
-      }, 250)
+        dispatch({ type: 'END_MOVE' })
+      }, 125)
+    } else {
+      dispatch({ type: 'END_MOVE' })
     }
 
 
-  }, [tiles, dispatch])
+  }, [tiles])
 
 
   const start = useCallback(()=> {
+    dispatch({ type: 'EMPTY_BOARD' })
     dispatch({ type: 'CREATE_TILE' })
     dispatch({ type: 'CREATE_TILE' })
   }, [])
@@ -296,6 +432,10 @@ const useGame = () => {
 
 
   useEffect(() => {
+    if (gameOver) {
+      console.log('gameOver')
+      return
+    }
     const handleKeyDown = (e: KeyboardEvent) => {
       // disables page scrolling with keyboard arrows
       e.preventDefault();
@@ -314,7 +454,10 @@ const useGame = () => {
           moveDown();
           break;
       }
-    };
+    }
+
+    // can add throttle
+    // const throttleHandle = throttle(handleKeyDown, 150)
 
     window.addEventListener("keydown", handleKeyDown);
 
@@ -322,15 +465,13 @@ const useGame = () => {
       window.removeEventListener("keydown", handleKeyDown);
     }
 
-  }, [moveLeft, moveRight])
-
-
-
-
+  }, [moveLeft, moveRight, moveUp, moveDown, gameOver])
 
   return {
     start,
     tiles,
+    score,
+    gameOver,
   }
 
 }
