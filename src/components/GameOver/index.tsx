@@ -20,7 +20,7 @@ const SGameOver = styled.div<{ show: boolean }>`
 
   .text {
     color: white;
-    font-size: 2rem;
+    font-size: 2em;
   }
 `;
 
@@ -33,7 +33,7 @@ const GameOver: React.FC<{ start: () => void }> = ({ start }) => {
   }, []);
   return (
     <SGameOver show={show}>
-      <div style={{ marginTop: "-4rem", marginBottom: "24px" }}>
+      <div style={{ marginTop: "-4em", marginBottom: "1.5em" }}>
         <div className="text">Game over!</div>
       </div>
       <div>

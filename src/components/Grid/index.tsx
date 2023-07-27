@@ -1,17 +1,18 @@
 import { ROW, COL } from '@/constants'
 import { styled } from '@linaria/react'
+import { MediaMobile } from '@/style'
+
 
 
 const GridWrapper = styled.div`
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 15px;
+  gap: var(--grid-gap);
 `
 const GridCell = styled.div`
   background: #F8FFE5;
-  width: 113px;
-  height: 113px;
-
+  width: var(--grid-size);
+  height: var(--grid-size);
 `
 
 
