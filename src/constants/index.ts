@@ -1,8 +1,6 @@
-const ROW = 4
-const COL = 4
-
-
-export {
-  ROW,
-  COL,
+export enum GameStatus {
+  PENDING,
+  RUNNING,
+  SUCCESS,
+  FAIL
 }

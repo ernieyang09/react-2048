@@ -3,7 +3,7 @@ import { useEffect } from "react";
 import { useGame } from "./hooks";
 import Grid from "./components/Grid";
 import Tile from "./components/Tile";
-import GameOver from "./components/GameOver";
+import GameResult from "./components/GameResult";
 import Button from "./components/Button";
 import Theme from "@/style/Theme";
 import { MediaMobile } from "@/style";
@@ -46,7 +46,7 @@ const Score = styled.div`
 `;
 
 function App() {
-  const { tiles, start, score, gameOver } = useGame();
+  const { tiles, start, score, gameStatus } = useGame();
 
   useEffect(() => {
     start();
@@ -96,18 +96,8 @@ function App() {
                 update={tile.update}
               />
             ))}
-            {/* <Tile number={4} X={0} Y={1} />
-          <Tile number={8} X={0} Y={2} />
-          <Tile number={16} X={0} Y={3} />
-          <Tile number={32} X={1} Y={0} />
-          <Tile number={64} X={1} Y={1} />
-          <Tile number={128} X={1} Y={2} />
-          <Tile number={256} X={1} Y={3} />
-          <Tile number={512} X={2} Y={0} />
-          <Tile number={1024} X={2} Y={1} />
-          <Tile number={2048} X={2} Y={2} /> */}
           </div>
-          {gameOver && <GameOver start={start} />}
+          <GameResult gameStatus={gameStatus} start={start} />
         </Board>
       </Test>
     </Theme>

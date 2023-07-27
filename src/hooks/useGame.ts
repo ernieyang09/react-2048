@@ -1,6 +1,7 @@
 // import { throttle } from 'lodash'
-import { useState, useEffect, useReducer, useCallback, useRef } from "react"
+import { useEffect, useReducer, useCallback, useRef } from "react"
 import { reducer, initState } from "./reducer";
+import { GameStatus } from "@/constants";
 
 const freshNow = (tiles) => {
   const  newBoard = Object.keys(tiles).reduce((a, key)=> {
@@ -18,44 +19,29 @@ const freshNow = (tiles) => {
   return newBoard
 }
 
-const debug = (tiles) => {
-  const set = new Set([...Array(16).keys()])
-  // console.log(tiles)
-  for (const tile of Object.values(tiles)) {
-    if (!set.has(tile.x * 4 + tile.y)) {
-      if (tile.update ==='delete') {
-        continue
-      }
-      console.log(tiles)
-      console.log(tile.x, tile.y)
-      throw 123
-    }
-    if (tile.update !=='delete') {
-      set.delete(tile.x * 4 + tile.y)
-    }
-  }
-
-}
-
-const check = (tiles) => {
+const checkBoard = (tiles) => {
   const tileMap = Array(16).fill(0)
   const currentBoard = Object.values(tiles)
-  if (currentBoard.length !== 16) {
-    return false
-  }
+  
   for (const tile of currentBoard) {
+    if (tile.value === 2048) {
+      return GameStatus.SUCCESS
+    }
     const { x, y } = tile
     tileMap[x * 4 + y] = tile
+  }
+  if (currentBoard.length !== 16) {
+    return GameStatus.PENDING
   }
   for (let i = 0; i < 4; i++) {
     for (let j = i + 1; j < 4; j++) {
       if (tileMap[i * 4 + j].value === tileMap[i * 4 + j - 1].value) {
-        return false
+        return GameStatus.PENDING
       }
     }
     for (let j = i + 1; j < 4; j++) {
       if (tileMap[i + j * 4].value === tileMap[i + j * 4 - 4].value) {
-        return false
+        return GameStatus.PENDING
       }
     }
   }
@@ -63,16 +49,16 @@ const check = (tiles) => {
   for (let i = 3; i > -1; i--) {
     for (let j = i - 1; j > -1; j--) {
       if (tileMap[i * 4 + j].value === tileMap[i * 4 + j + 1].value) {
-        return false
+        return GameStatus.PENDING
       }
     }
     for (let j = i - 1; j > -1; j--) {
       if (tileMap[i + j * 4].value === tileMap[i + j * 4 + 4].value) {
-        return false
+        return GameStatus.PENDING
       }
     }
   }
-  return true
+  return GameStatus.FAIL
 }
 
 const useGame = () => {
@@ -83,12 +69,7 @@ const useGame = () => {
 
 
   const score = Object.values(tiles).reduce((s, c) => s + c.value , 0)
-
-
-  const gameOver = stateChanging ? false : check(tiles)
-  // debug(tiles)
-  // const [tiles, setTiles] = useState(x)
-
+  const gameStatus = stateChanging ? GameStatus.RUNNING : checkBoard(tiles)
 
   useEffect(()=> {
     boardRef.current = tiles
@@ -432,8 +413,7 @@ const useGame = () => {
 
 
   useEffect(() => {
-    if (gameOver) {
-      console.log('gameOver')
+    if (['success', 'fail'].includes(gameStatus)) {
       return
     }
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -465,13 +445,13 @@ const useGame = () => {
       window.removeEventListener("keydown", handleKeyDown);
     }
 
-  }, [moveLeft, moveRight, moveUp, moveDown, gameOver])
+  }, [moveLeft, moveRight, moveUp, moveDown, gameStatus])
 
   return {
     start,
     tiles,
     score,
-    gameOver,
+    gameStatus,
   }
 
 }

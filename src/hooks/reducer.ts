@@ -24,18 +24,6 @@ type ACTION_EMPTY_BOARD = { type: 'EMPTY_BOARD' }
 export type TypeAction = ACTION_MOVE_TILE | ACTION_CREATE_TILE | ACTION_UPDATE_TILE | ACTION_START_MOVE | ACTION_END_MOVE | ACTION_EMPTY_BOARD
 
 
-// class GAME2048 {
-//   tiles
-//   stateChanging
-//   constructor(state: IState) {
-//     this.tiles = state.tiles
-//     this.stateChanging = state.stateChanging
-//   }
-
-
-// }
-
-
 
 const createTile = (tiles) => {
   const set = new Set([...Array(16).keys()])

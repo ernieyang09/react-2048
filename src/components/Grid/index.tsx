@@ -1,8 +1,4 @@
-import { ROW, COL } from '@/constants'
 import { styled } from '@linaria/react'
-import { MediaMobile } from '@/style'
-
-
 
 const GridWrapper = styled.div`
   display: grid;
@@ -20,7 +16,7 @@ const Grid: React.FC = () => {
 
   const grids = () => {
     const arr = []
-    for (let i = 0; i < ROW * COL; i++) {
+    for (let i = 0; i < 4 * 4; i++) {
       arr.push(<GridCell key={i}></GridCell>)
     }
     return arr

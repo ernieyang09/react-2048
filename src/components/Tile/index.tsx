@@ -1,4 +1,3 @@
-import { ROW, COL } from "@/constants";
 import { lighten, darken } from "polished";
 import { styled } from "@linaria/react";
 import { useEffect, useState } from "react";
