@@ -72,26 +72,17 @@ const checkBoard = (tiles) => {
 }
 
 const useGame = () => {
-
+  const recorded = useRef(false)
   const [state, dispatch] = useReducer(reducer, initState);
-  const [gameStatus, setGameStatus] = useState(GameStatus.RUNNING)
+  const [suspend, setSuspend] = useState(false)
   const { tiles, stateChanging } = state
   const boardRef = useRef(tiles)
 
 
   const score = Object.values(tiles).reduce((s, c) => s + c.value, 0)
-  // const gameStatus = stateChanging ? GameStatus.RUNNING : checkBoard(tiles)
+  const gameStatus = stateChanging ? GameStatus.RUNNING : checkBoard(tiles)
 
-  useEffect(()=> {
-    if (gameStatus === GameStatus.STOP) {
-      return
-    }
-    if (stateChanging) {
-      setGameStatus(GameStatus.RUNNING)
-      return
-    }
-    setGameStatus(checkBoard(tiles))
-  }, [gameStatus, stateChanging, tiles])
+
 
   useEffect(() => {
     boardRef.current = tiles
@@ -99,6 +90,10 @@ const useGame = () => {
 
   useEffect(() => {
     if ([GameStatus.SUCCESS, GameStatus.FAIL].includes(gameStatus)) {
+      if (recorded.current) {
+        return
+      }
+      recorded.current = true
       pushLocalStorage({
         date: new Date(),
         score,
@@ -441,20 +436,21 @@ const useGame = () => {
     dispatch({ type: 'EMPTY_BOARD' })
     dispatch({ type: 'CREATE_TILE' })
     dispatch({ type: 'CREATE_TILE' })
+    recorded.current = false
   }, [])
 
   const stop = useCallback(() => {
-    setGameStatus(GameStatus.STOP)
+    setSuspend(true)
   }, [])
 
   const resume = useCallback(() => {
-    setGameStatus(GameStatus.PENDING)
+    setSuspend(false)
   }, [])
 
 
 
   useEffect(() => {
-    if ([GameStatus.SUCCESS, GameStatus.FAIL, GameStatus.STOP].includes(gameStatus)) {
+    if ([GameStatus.SUCCESS, GameStatus.FAIL].includes(gameStatus) || suspend) {
       return
     }
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -486,7 +482,7 @@ const useGame = () => {
       window.removeEventListener("keydown", handleKeyDown);
     }
 
-  }, [moveLeft, moveRight, moveUp, moveDown, gameStatus])
+  }, [moveLeft, moveRight, moveUp, moveDown, gameStatus, suspend])
 
   return {
     start,
