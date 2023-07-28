@@ -1,10 +1,11 @@
 import { styled } from "@linaria/react";
-import { useEffect } from "react";
-import { useGame } from "./hooks";
-import Grid from "./components/Grid";
-import Tile from "./components/Tile";
-import GameResult from "./components/GameResult";
-import Button from "./components/Button";
+import { useEffect, useRef } from "react";
+import { useGame } from "@/hooks";
+import Grid from "@/components/Grid";
+import Tile from "@/components/Tile";
+import GameResult from "@/components/GameResult";
+import Button from "@/components/Button";
+import RecordBlock from "./components/Record";
 import Theme from "@/style/Theme";
 import { MediaMobile } from "@/style";
 
@@ -22,7 +23,7 @@ const Board = styled.div`
   }
 `;
 
-const Test = styled.div`
+const Wrapper = styled.div`
   width: 527px;
   margin: 0 auto;
 
@@ -46,7 +47,8 @@ const Score = styled.div`
 `;
 
 function App() {
-  const { tiles, start, score, gameStatus } = useGame();
+  const { tiles, start, score, gameStatus, stop, resume } = useGame();
+  const rootRef = useRef(null)
 
   useEffect(() => {
     start();
@@ -54,13 +56,13 @@ function App() {
 
   return (
     <Theme>
-      <Test>
+      <Wrapper ref={rootRef}>
         <div
           style={{
             fontSize: "3em",
             display: "flex",
-            marginTop: "24px",
-            marginBottom: "24px",
+            marginTop: "2rem",
+            marginBottom: "2rem",
           }}
         >
           React
@@ -84,22 +86,25 @@ function App() {
           </Score>
           <Button onClick={start}>New Game</Button>
         </div>
-        <Board>
-          <div style={{ position: "relative" }}>
-            <Grid />
-            {Object.entries(tiles).map(([key, tile]) => (
-              <Tile
-                key={key}
-                number={tile.value}
-                X={tile.x}
-                Y={tile.y}
-                update={tile.update}
-              />
-            ))}
-          </div>
-          <GameResult gameStatus={gameStatus} start={start} />
-        </Board>
-      </Test>
+        <div style={{ marginBottom: '2rem' }}>
+          <Board>
+            <div style={{ position: "relative" }}>
+              <Grid />
+              {Object.entries(tiles).map(([key, tile]) => (
+                <Tile
+                  key={key}
+                  number={tile.value}
+                  X={tile.x}
+                  Y={tile.y}
+                  update={tile.update}
+                />
+              ))}
+            </div>
+            <GameResult gameStatus={gameStatus} start={start} />
+          </Board>
+        </div>
+        <RecordBlock rootRef={rootRef} stop={stop} resume={resume} />
+      </Wrapper>
     </Theme>
   );
 }

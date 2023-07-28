@@ -1,20 +1,30 @@
 // import { throttle } from 'lodash'
-import { useEffect, useReducer, useCallback, useRef } from "react"
+import { useEffect, useReducer, useCallback, useRef, useState } from "react"
 import { reducer, initState } from "./reducer";
-import { GameStatus } from "@/constants";
+import { GameStatus, LOCAL_STORAGE_KEY } from "@/constants";
+
+const pushLocalStorage = (record) => {
+  const histories = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY) || '[]')
+  histories.push(record)
+  localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(histories.slice(0, 10)))
+  // TODO optimize
+  setTimeout(() => {
+    window.dispatchEvent(new Event("new record"))
+  }, 500)
+}
 
 const freshNow = (tiles) => {
-  const  newBoard = Object.keys(tiles).reduce((a, key)=> {
+  const newBoard = Object.keys(tiles).reduce((a, key) => {
     const tile = tiles[key]
     if (tile.update === 'delete') {
       return a
     }
     if (tile.update === 'value') {
-      return { ...a, [key]: {...tile, value: tile.value * 2, update: undefined } }
+      return { ...a, [key]: { ...tile, value: tile.value * 2, update: undefined } }
     }
-    return { ...a, [key]: {...tile} }
+    return { ...a, [key]: { ...tile } }
   }, {})
-  
+
 
   return newBoard
 }
@@ -22,7 +32,7 @@ const freshNow = (tiles) => {
 const checkBoard = (tiles) => {
   const tileMap = Array(16).fill(0)
   const currentBoard = Object.values(tiles)
-  
+
   for (const tile of currentBoard) {
     if (tile.value === 2048) {
       return GameStatus.SUCCESS
@@ -64,16 +74,39 @@ const checkBoard = (tiles) => {
 const useGame = () => {
 
   const [state, dispatch] = useReducer(reducer, initState);
+  const [gameStatus, setGameStatus] = useState(GameStatus.RUNNING)
   const { tiles, stateChanging } = state
   const boardRef = useRef(tiles)
 
 
-  const score = Object.values(tiles).reduce((s, c) => s + c.value , 0)
-  const gameStatus = stateChanging ? GameStatus.RUNNING : checkBoard(tiles)
+  const score = Object.values(tiles).reduce((s, c) => s + c.value, 0)
+  // const gameStatus = stateChanging ? GameStatus.RUNNING : checkBoard(tiles)
 
   useEffect(()=> {
+    if (gameStatus === GameStatus.STOP) {
+      return
+    }
+    if (stateChanging) {
+      setGameStatus(GameStatus.RUNNING)
+      return
+    }
+    setGameStatus(checkBoard(tiles))
+  }, [gameStatus, stateChanging, tiles])
+
+  useEffect(() => {
     boardRef.current = tiles
   }, [tiles])
+
+  useEffect(() => {
+    if ([GameStatus.SUCCESS, GameStatus.FAIL].includes(gameStatus)) {
+      pushLocalStorage({
+        date: new Date(),
+        score,
+        data: tiles,
+        gameStatus,
+      })
+    }
+  }, [tiles, score, gameStatus])
 
   const moveUp = useCallback(() => {
     // if (stateChanging) {
@@ -224,7 +257,7 @@ const useGame = () => {
         prevTile = currentTile
       }
     }
-    
+
 
     // console.log(updated)
 
@@ -404,16 +437,24 @@ const useGame = () => {
   }, [tiles])
 
 
-  const start = useCallback(()=> {
+  const start = useCallback(() => {
     dispatch({ type: 'EMPTY_BOARD' })
     dispatch({ type: 'CREATE_TILE' })
     dispatch({ type: 'CREATE_TILE' })
   }, [])
 
+  const stop = useCallback(() => {
+    setGameStatus(GameStatus.STOP)
+  }, [])
+
+  const resume = useCallback(() => {
+    setGameStatus(GameStatus.PENDING)
+  }, [])
+
 
 
   useEffect(() => {
-    if (['success', 'fail'].includes(gameStatus)) {
+    if ([GameStatus.SUCCESS, GameStatus.FAIL, GameStatus.STOP].includes(gameStatus)) {
       return
     }
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -449,6 +490,8 @@ const useGame = () => {
 
   return {
     start,
+    stop,
+    resume,
     tiles,
     score,
     gameStatus,

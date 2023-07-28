@@ -10,7 +10,7 @@ const mobile = {
 }
 
 export const MediaMobile = `
-  @media screen and (max-width: 520px) {
+  @media screen and (max-width: 600px) {
 `;
 
 export const style = {
