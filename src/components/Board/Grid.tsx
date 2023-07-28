@@ -6,14 +6,14 @@ const GridWrapper = styled.div`
   gap: var(--grid-gap);
 `
 const GridCell = styled.div`
-  background: #F8FFE5;
+  background: #f8ffe5;
   width: var(--grid-size);
   height: var(--grid-size);
 `
 
+// export default Grid
 
 const Grid: React.FC = () => {
-
   const grids = () => {
     const arr = []
     for (let i = 0; i < 4 * 4; i++) {
@@ -21,11 +21,7 @@ const Grid: React.FC = () => {
     }
     return arr
   }
-  return (
-    <GridWrapper>
-      {grids()}
-    </GridWrapper>
-  )
+  return <GridWrapper>{grids()}</GridWrapper>
 }
 
 export default Grid

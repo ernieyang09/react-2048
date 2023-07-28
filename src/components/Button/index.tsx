@@ -1,4 +1,4 @@
-import { styled } from "@linaria/react";
+import { styled } from '@linaria/react'
 
 const Button = styled.div`
   font-family: inherit;
@@ -13,6 +13,6 @@ const Button = styled.div`
   border: 1px solid transparent;
   cursor: pointer;
   text-align: center;
-`;
+`
 
-export default Button;
+export default Button
