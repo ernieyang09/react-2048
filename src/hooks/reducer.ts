@@ -1,11 +1,10 @@
-import { Tile } from '@/types/Tile'
+import { Board } from '@/types/Tile'
+import { updateBoard } from '@/utils/Board'
 let idx = 99
 
 interface IState {
-  tiles: {
-    [id: number]: Tile
-  }
-  stateChanging: boolean;
+  tiles: Board
+  stateChanging: boolean
 }
 
 export const initState: IState = {
@@ -13,19 +12,23 @@ export const initState: IState = {
   stateChanging: false,
 }
 
-type ACTION_MOVE_TILE = { type: 'MOVE_TILE', payload: { [id: number]: Tile } }
+type ACTION_MOVE_TILE = { type: 'MOVE_TILE'; payload: Board }
 type ACTION_CREATE_TILE = { type: 'CREATE_TILE' }
 type ACTION_UPDATE_TILE = { type: 'UPDATE_TILE' }
 type ACTION_START_MOVE = { type: 'START_MOVE' }
 type ACTION_END_MOVE = { type: 'END_MOVE' }
 type ACTION_EMPTY_BOARD = { type: 'EMPTY_BOARD' }
 
+export type TypeAction =
+  | ACTION_MOVE_TILE
+  | ACTION_CREATE_TILE
+  | ACTION_UPDATE_TILE
+  | ACTION_START_MOVE
+  | ACTION_END_MOVE
+  | ACTION_EMPTY_BOARD
 
-export type TypeAction = ACTION_MOVE_TILE | ACTION_CREATE_TILE | ACTION_UPDATE_TILE | ACTION_START_MOVE | ACTION_END_MOVE | ACTION_EMPTY_BOARD
-
-
-
-const createTile = (tiles) => {
+const createTile = (tiles: Board) => {
+  // maybe split condition into another function
   const set = new Set([...Array(16).keys()])
 
   for (const tile of Object.values(tiles)) {
@@ -36,43 +39,43 @@ const createTile = (tiles) => {
     return undefined
   }
 
-  const items = Array.from(set);
+  const items = Array.from(set)
   const positionIdx = items[Math.floor(Math.random() * items.length)]
 
   return {
     id: idx++,
     x: Math.floor(positionIdx / 4),
     y: positionIdx % 4,
-    value: Math.random() < 0.9 ? 2 as const : 4 as const,
+    value: Math.random() < 0.9 ? (2 as const) : (4 as const),
     update: undefined,
   }
 }
 
 // TODO optimize move function(extract)
 export const reducer = (state: IState, action: TypeAction): IState => {
-  switch(action.type) {
-    case "START_MOVE": {
+  switch (action.type) {
+    case 'START_MOVE': {
       return {
         ...state,
         stateChanging: true,
       }
     }
-    case "END_MOVE": {
+    case 'END_MOVE': {
       return {
         ...state,
         stateChanging: false,
       }
     }
-    case "MOVE_TILE": {
+    case 'MOVE_TILE': {
       const tiles = action.payload
       return {
         ...state,
         tiles: {
           ...tiles,
-        }
+        },
       }
     }
-    case "CREATE_TILE": {
+    case 'CREATE_TILE': {
       const { tiles } = state
 
       const tile = createTile(tiles)
@@ -82,27 +85,17 @@ export const reducer = (state: IState, action: TypeAction): IState => {
         tiles: {
           ...state.tiles,
           ...(tile && { [tile.id]: tile }),
-        }
+        },
       }
     }
-    case "EMPTY_BOARD": {
+    case 'EMPTY_BOARD': {
       return {
         ...initState,
       }
     }
-    case "UPDATE_TILE": {
+    case 'UPDATE_TILE': {
       const { tiles } = state
-      const  newBoard = Object.keys(tiles).reduce((a, key)=> {
-        const tile = tiles[key]
-        if (tile.update === 'delete') {
-          return a
-        }
-        if (tile.update === 'value') {
-          return { ...a, [key]: {...tile, value: tile.value * 2, update: undefined } }
-        }
-        return { ...a, [key]: {...tile} }
-      }, {})
-
+      const newBoard = updateBoard(tiles)
       const tile = createTile(newBoard)
 
       return {
@@ -110,7 +103,7 @@ export const reducer = (state: IState, action: TypeAction): IState => {
         tiles: {
           ...newBoard,
           ...(tile && { [tile.id]: tile }),
-        }
+        },
       }
     }
     default:

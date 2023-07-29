@@ -1,7 +1,8 @@
 // import { throttle } from 'lodash'
-import { useEffect, useReducer, useCallback, useRef, useState } from "react"
-import { reducer, initState } from "./reducer";
-import { GameStatus, LOCAL_STORAGE_KEY } from "@/constants";
+import { useEffect, useReducer, useCallback, useRef, useState } from 'react'
+import { reducer, initState } from './reducer'
+import { GameStatus, LOCAL_STORAGE_KEY } from '@/constants'
+import { checkBoard, updateBoard } from '@/utils/Board'
 
 const pushLocalStorage = (record) => {
   const histories = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY) || '[]')
@@ -9,80 +10,18 @@ const pushLocalStorage = (record) => {
   localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(histories.slice(0, 10)))
   // TODO optimize
   setTimeout(() => {
-    window.dispatchEvent(new Event("new record"))
+    window.dispatchEvent(new Event('new record'))
   }, 500)
 }
-
-const freshNow = (tiles) => {
-  const newBoard = Object.keys(tiles).reduce((a, key) => {
-    const tile = tiles[key]
-    if (tile.update === 'delete') {
-      return a
-    }
-    if (tile.update === 'value') {
-      return { ...a, [key]: { ...tile, value: tile.value * 2, update: undefined } }
-    }
-    return { ...a, [key]: { ...tile } }
-  }, {})
-
-
-  return newBoard
-}
-
-const checkBoard = (tiles) => {
-  const tileMap = Array(16).fill(0)
-  const currentBoard = Object.values(tiles)
-
-  for (const tile of currentBoard) {
-    if (tile.value === 2048) {
-      return GameStatus.SUCCESS
-    }
-    const { x, y } = tile
-    tileMap[x * 4 + y] = tile
-  }
-  if (currentBoard.length !== 16) {
-    return GameStatus.PENDING
-  }
-  for (let i = 0; i < 4; i++) {
-    for (let j = i + 1; j < 4; j++) {
-      if (tileMap[i * 4 + j].value === tileMap[i * 4 + j - 1].value) {
-        return GameStatus.PENDING
-      }
-    }
-    for (let j = i + 1; j < 4; j++) {
-      if (tileMap[i + j * 4].value === tileMap[i + j * 4 - 4].value) {
-        return GameStatus.PENDING
-      }
-    }
-  }
-
-  for (let i = 3; i > -1; i--) {
-    for (let j = i - 1; j > -1; j--) {
-      if (tileMap[i * 4 + j].value === tileMap[i * 4 + j + 1].value) {
-        return GameStatus.PENDING
-      }
-    }
-    for (let j = i - 1; j > -1; j--) {
-      if (tileMap[i + j * 4].value === tileMap[i + j * 4 + 4].value) {
-        return GameStatus.PENDING
-      }
-    }
-  }
-  return GameStatus.FAIL
-}
-
 const useGame = () => {
   const recorded = useRef(false)
-  const [state, dispatch] = useReducer(reducer, initState);
+  const [state, dispatch] = useReducer(reducer, initState)
   const [suspend, setSuspend] = useState(false)
   const { tiles, stateChanging } = state
   const boardRef = useRef(tiles)
 
-
   const score = Object.values(tiles).reduce((s, c) => s + c.value, 0)
   const gameStatus = stateChanging ? GameStatus.RUNNING : checkBoard(tiles)
-
-
 
   useEffect(() => {
     boardRef.current = tiles
@@ -110,7 +49,7 @@ const useGame = () => {
     // console.log('up', tiles)
 
     dispatch({ type: 'START_MOVE' })
-    const updated = freshNow(tiles)
+    const updated = updateBoard(tiles)
 
     const checkFreeSlot = (x, y, rowArr) => {
       let newX = x
@@ -138,22 +77,19 @@ const useGame = () => {
       }
 
       for (let j = 0; j < 4; j++) {
-
         const currentTile = tileMap[i + j * 4]
         if (currentTile == 0) {
           continue
         }
         if (prevTile && prevTile.update !== 'delete' && prevTile.value === currentTile.value) {
-
           currentTile.x = prevTile.x
           currentTile.y = prevTile.y
-          prevTile.update = "value"
-          currentTile.update = "delete"
+          prevTile.update = 'value'
+          currentTile.update = 'delete'
 
           updated[currentTile.id] = { ...currentTile }
           updated[prevTile.id] = prevTile
           rowArr[j] = 0
-
         }
 
         if (currentTile.update === 'delete') {
@@ -182,7 +118,6 @@ const useGame = () => {
     } else {
       dispatch({ type: 'END_MOVE' })
     }
-
   }, [tiles])
 
   const moveDown = useCallback(() => {
@@ -191,7 +126,7 @@ const useGame = () => {
     // }
     // console.log('down', tiles)
     dispatch({ type: 'START_MOVE' })
-    const updated = freshNow(tiles)
+    const updated = updateBoard(tiles)
 
     const checkFreeSlot = (x, y, rowArr) => {
       let newX = x
@@ -219,22 +154,19 @@ const useGame = () => {
       }
 
       for (let j = 3; j > -1; j--) {
-
         const currentTile = tileMap[i + j * 4]
         if (currentTile == 0) {
           continue
         }
         if (prevTile && prevTile.update !== 'delete' && prevTile.value === currentTile.value) {
-
           currentTile.x = prevTile.x
           currentTile.y = prevTile.y
-          prevTile.update = "value"
-          currentTile.update = "delete"
+          prevTile.update = 'value'
+          currentTile.update = 'delete'
 
           updated[currentTile.id] = { ...currentTile }
           updated[prevTile.id] = prevTile
           rowArr[j] = 0
-
         }
 
         if (currentTile.update === 'delete') {
@@ -252,7 +184,6 @@ const useGame = () => {
         prevTile = currentTile
       }
     }
-
 
     // console.log(updated)
 
@@ -277,7 +208,7 @@ const useGame = () => {
     // }
     // console.log('right', tiles)
     dispatch({ type: 'START_MOVE' })
-    const updated = freshNow(tiles)
+    const updated = updateBoard(tiles)
 
     const checkFreeSlot = (x, y, rowArr) => {
       let newY = y
@@ -308,13 +239,12 @@ const useGame = () => {
         if (prevTile && prevTile.update !== 'delete' && prevTile.value === currentTile.value) {
           currentTile.x = prevTile.x
           currentTile.y = prevTile.y
-          prevTile.update = "value"
-          currentTile.update = "delete"
+          prevTile.update = 'value'
+          currentTile.update = 'delete'
 
           updated[currentTile.id] = { ...currentTile }
           updated[prevTile.id] = prevTile
           rowArr[j] = 0
-
         }
 
         if (currentTile.update === 'delete') {
@@ -354,7 +284,7 @@ const useGame = () => {
     // }
     // console.log('left', tiles)
     dispatch({ type: 'START_MOVE' })
-    const updated = freshNow(tiles)
+    const updated = updateBoard(tiles)
 
     const checkFreeSlot = (x, y, rowArr) => {
       let newY = y
@@ -383,11 +313,10 @@ const useGame = () => {
           continue
         }
         if (prevTile && prevTile.update !== 'delete' && prevTile.value === currentTile.value) {
-
           currentTile.x = prevTile.x
           currentTile.y = prevTile.y
-          prevTile.update = "value"
-          currentTile.update = "delete"
+          prevTile.update = 'value'
+          currentTile.update = 'delete'
 
           updated[currentTile.id] = { ...currentTile }
           updated[prevTile.id] = prevTile
@@ -397,13 +326,11 @@ const useGame = () => {
           //   prev: prevTile,
           //   current: currentTile,
           // } })
-
         }
 
         if (currentTile.update === 'delete') {
           continue
         }
-
 
         const position = checkFreeSlot(currentTile.x, currentTile.y, rowArr)
 
@@ -427,10 +354,7 @@ const useGame = () => {
     } else {
       dispatch({ type: 'END_MOVE' })
     }
-
-
   }, [tiles])
-
 
   const start = useCallback(() => {
     dispatch({ type: 'EMPTY_BOARD' })
@@ -447,41 +371,38 @@ const useGame = () => {
     setSuspend(false)
   }, [])
 
-
-
   useEffect(() => {
     if ([GameStatus.SUCCESS, GameStatus.FAIL].includes(gameStatus) || suspend) {
       return
     }
     const handleKeyDown = (e: KeyboardEvent) => {
       // disables page scrolling with keyboard arrows
-      e.preventDefault();
+      e.preventDefault()
 
       switch (e.code) {
-        case "ArrowLeft":
-          moveLeft();
-          break;
-        case "ArrowRight":
-          moveRight();
-          break;
-        case "ArrowUp":
-          moveUp();
-          break;
-        case "ArrowDown":
-          moveDown();
-          break;
+        case 'ArrowLeft':
+          moveLeft()
+          break
+        case 'ArrowRight':
+          moveRight()
+          break
+        case 'ArrowUp':
+          moveUp()
+          break
+        case 'ArrowDown':
+          moveDown()
+          break
       }
     }
 
     // can add throttle
     // const throttleHandle = throttle(handleKeyDown, 150)
 
-    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener('keydown', handleKeyDown)
 
     return () => {
-      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener('keydown', handleKeyDown)
     }
-
   }, [moveLeft, moveRight, moveUp, moveDown, gameStatus, suspend])
 
   return {
@@ -492,7 +413,6 @@ const useGame = () => {
     score,
     gameStatus,
   }
-
 }
 
 export default useGame
