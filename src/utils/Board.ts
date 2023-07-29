@@ -1,9 +1,9 @@
-import { Board } from '@/types/Tile'
+import { Board, Tile } from '@/types/Tile'
 import { GameStatus } from '@/constants'
 
 // maybe make it as class
 
-const updateBoard = (tiles: Board) => {
+const updateBoard = (tiles: Board): { [id: number]: Tile } => {
   const newBoard = Object.values(tiles).reduce((a, tile) => {
     if (tile.update === 'delete') {
       return a

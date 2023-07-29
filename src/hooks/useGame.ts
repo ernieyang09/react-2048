@@ -3,8 +3,16 @@ import { useEffect, useReducer, useCallback, useRef, useState } from 'react'
 import { reducer, initState } from './reducer'
 import { GameStatus, LOCAL_STORAGE_KEY } from '@/constants'
 import { checkBoard, updateBoard } from '@/utils/Board'
+import { Board, Tile } from '@/types/Tile'
 
-const pushLocalStorage = (record) => {
+type Record = {
+  date: Date
+  score: number
+  data: Board
+  gameStatus: GameStatus
+}
+
+const pushLocalStorage = (record: Record) => {
   const histories = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY) || '[]')
   histories.push(record)
   localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(histories.slice(0, 10)))
@@ -13,6 +21,15 @@ const pushLocalStorage = (record) => {
     window.dispatchEvent(new Event('new record'))
   }, 500)
 }
+
+type TileArr = (0 | 1 | Tile)[]
+type GetRowOrColumnFn = (arr: TileArr, i: number) => TileArr
+type CheckFreeSlotFn = (
+  fixRowOrCol: number,
+  dynamicRowOrCol: number,
+  rowArr: (0 | 1 | Tile)[],
+) => number[]
+
 const useGame = () => {
   const recorded = useRef(false)
   const [state, dispatch] = useReducer(reducer, initState)
@@ -42,16 +59,65 @@ const useGame = () => {
     }
   }, [tiles, score, gameStatus])
 
+  const move = useCallback(
+    (getRowOrColumn: GetRowOrColumnFn, checkFreeSlot: CheckFreeSlotFn) => {
+      dispatch({ type: 'START_MOVE' })
+      const updated = updateBoard(tiles)
+      const tileArr = Array(16).fill(0)
+      for (const tile of Object.values(updated)) {
+        const { x, y } = tile
+        tileArr[x * 4 + y] = tile
+      }
+
+      for (let i = 0; i < 4; i++) {
+        let prevTile
+        const rowArr = getRowOrColumn(tileArr, i)
+        for (let j = 0; j < 4; j++) {
+          const currentTile = rowArr[j]
+          if (currentTile == 0 || currentTile == 1) {
+            continue
+          }
+          if (prevTile && prevTile.update !== 'delete' && prevTile.value === currentTile.value) {
+            currentTile.x = prevTile.x
+            currentTile.y = prevTile.y
+            prevTile.update = 'value'
+            currentTile.update = 'delete'
+
+            updated[currentTile.id] = currentTile
+            updated[prevTile.id] = prevTile
+            rowArr[j] = 0
+          }
+
+          if (currentTile.update !== 'delete') {
+            const position = checkFreeSlot(i, j, rowArr)
+
+            if (position[0] != currentTile.x || position[1] != currentTile.y) {
+              currentTile.x = position[0]
+              currentTile.y = position[1]
+              updated[currentTile.id] = currentTile
+            }
+          }
+
+          prevTile = currentTile
+        }
+      }
+
+      if (Object.keys(updated).length) {
+        dispatch({ type: 'MOVE_TILE', payload: updated })
+
+        setTimeout(() => {
+          dispatch({ type: 'UPDATE_TILE' })
+          dispatch({ type: 'END_MOVE' })
+        }, 125)
+      } else {
+        dispatch({ type: 'END_MOVE' })
+      }
+    },
+    [tiles],
+  )
+
   const moveUp = useCallback(() => {
-    // if (stateChanging) {
-    //   return
-    // }
-    // console.log('up', tiles)
-
-    dispatch({ type: 'START_MOVE' })
-    const updated = updateBoard(tiles)
-
-    const checkFreeSlot = (x, y, rowArr) => {
+    const checkFreeSlot: CheckFreeSlotFn = (y, x, rowArr) => {
       let newX = x
       for (let i = 0; i < x; i++) {
         if (rowArr[i] == 0) {
@@ -64,75 +130,24 @@ const useGame = () => {
       return [newX, y]
     }
 
-    const tileMap = Array(16).fill(0)
-    for (const tile of Object.values(updated)) {
-      const { x, y } = tile
-      tileMap[x * 4 + y] = tile
-    }
-    for (let i = 0; i < 4; i++) {
-      let prevTile
-      const rowArr = []
+    const getRowOrColumn: GetRowOrColumnFn = (tileArr, i) => {
+      const rowArr: TileArr = []
       for (let j = 0; j < 4; j++) {
-        rowArr.push(tileMap[i + j * 4])
+        rowArr.push(tileArr[i + j * 4])
       }
-
-      for (let j = 0; j < 4; j++) {
-        const currentTile = tileMap[i + j * 4]
-        if (currentTile == 0) {
-          continue
-        }
-        if (prevTile && prevTile.update !== 'delete' && prevTile.value === currentTile.value) {
-          currentTile.x = prevTile.x
-          currentTile.y = prevTile.y
-          prevTile.update = 'value'
-          currentTile.update = 'delete'
-
-          updated[currentTile.id] = { ...currentTile }
-          updated[prevTile.id] = prevTile
-          rowArr[j] = 0
-        }
-
-        if (currentTile.update === 'delete') {
-          continue
-        }
-
-        const position = checkFreeSlot(currentTile.x, currentTile.y, rowArr)
-
-        if (position[0] != currentTile.x || position[1] != currentTile.y) {
-          currentTile.x = position[0]
-          currentTile.y = position[1]
-          updated[currentTile.id] = { ...currentTile }
-        }
-
-        prevTile = currentTile
-      }
+      return rowArr
     }
 
-    if (Object.keys(updated).length) {
-      dispatch({ type: 'MOVE_TILE', payload: updated })
-
-      setTimeout(() => {
-        dispatch({ type: 'UPDATE_TILE' })
-        dispatch({ type: 'END_MOVE' })
-      }, 125)
-    } else {
-      dispatch({ type: 'END_MOVE' })
-    }
-  }, [tiles])
+    move(getRowOrColumn, checkFreeSlot)
+  }, [move])
 
   const moveDown = useCallback(() => {
-    // if (stateChanging) {
-    //   return
-    // }
-    // console.log('down', tiles)
-    dispatch({ type: 'START_MOVE' })
-    const updated = updateBoard(tiles)
+    const checkFreeSlot: CheckFreeSlotFn = (y, x, rowArr) => {
+      let newX = 3 - x
 
-    const checkFreeSlot = (x, y, rowArr) => {
-      let newX = x
-      for (let i = 3; i > x; i--) {
+      for (let i = 0; i < x; i++) {
         if (rowArr[i] == 0) {
-          newX = i
+          newX = 3 - i
           rowArr[i] = 1
           rowArr[x] = 0
           break
@@ -141,80 +156,24 @@ const useGame = () => {
       return [newX, y]
     }
 
-    const tileMap = Array(16).fill(0)
-    for (const tile of Object.values(updated)) {
-      const { x, y } = tile
-      tileMap[x * 4 + y] = tile
-    }
-    for (let i = 0; i < 4; i++) {
-      let prevTile
-      const rowArr = []
+    const getRowOrColumn: GetRowOrColumnFn = (tileArr, i) => {
+      const rowArr: TileArr = []
       for (let j = 0; j < 4; j++) {
-        rowArr.push(tileMap[i + j * 4])
+        rowArr.push(tileArr[i + j * 4])
       }
-
-      for (let j = 3; j > -1; j--) {
-        const currentTile = tileMap[i + j * 4]
-        if (currentTile == 0) {
-          continue
-        }
-        if (prevTile && prevTile.update !== 'delete' && prevTile.value === currentTile.value) {
-          currentTile.x = prevTile.x
-          currentTile.y = prevTile.y
-          prevTile.update = 'value'
-          currentTile.update = 'delete'
-
-          updated[currentTile.id] = { ...currentTile }
-          updated[prevTile.id] = prevTile
-          rowArr[j] = 0
-        }
-
-        if (currentTile.update === 'delete') {
-          continue
-        }
-
-        const position = checkFreeSlot(currentTile.x, currentTile.y, rowArr)
-
-        if (position[0] != currentTile.x || position[1] != currentTile.y) {
-          currentTile.x = position[0]
-          currentTile.y = position[1]
-          updated[currentTile.id] = { ...currentTile }
-        }
-
-        prevTile = currentTile
-      }
+      rowArr.reverse()
+      return rowArr
     }
 
-    // console.log(updated)
-
-    if (Object.keys(updated).length) {
-      dispatch({ type: 'MOVE_TILE', payload: updated })
-
-      setTimeout(() => {
-        dispatch({ type: 'UPDATE_TILE' })
-        dispatch({ type: 'END_MOVE' })
-      }, 125)
-    } else {
-      dispatch({ type: 'END_MOVE' })
-    }
-
-    // setTiles([...tiles])
-    // console.log(tileMap)
-  }, [tiles])
+    move(getRowOrColumn, checkFreeSlot)
+  }, [move])
 
   const moveRight = useCallback(() => {
-    // if (stateChanging) {
-    //   return
-    // }
-    // console.log('right', tiles)
-    dispatch({ type: 'START_MOVE' })
-    const updated = updateBoard(tiles)
-
-    const checkFreeSlot = (x, y, rowArr) => {
-      let newY = y
-      for (let i = 3; i > y; i--) {
+    const checkFreeSlot: CheckFreeSlotFn = (x, y, rowArr) => {
+      let newY = 3 - y
+      for (let i = 0; i < y; i++) {
         if (rowArr[i] == 0) {
-          newY = i
+          newY = 3 - i
           rowArr[i] = 1
           rowArr[y] = 0
           break
@@ -223,70 +182,17 @@ const useGame = () => {
       return [x, newY]
     }
 
-    const tileMap = Array(16).fill(0)
-    for (const tile of Object.values(updated)) {
-      const { x, y } = tile
-      tileMap[x * 4 + y] = tile
-    }
-    for (let i = 0; i < 4; i++) {
-      let prevTile
-      const rowArr = tileMap.slice(i * 4, i * 4 + 4)
-      for (let j = 3; j > -1; j--) {
-        const currentTile = tileMap[i * 4 + j]
-        if (currentTile == 0) {
-          continue
-        }
-        if (prevTile && prevTile.update !== 'delete' && prevTile.value === currentTile.value) {
-          currentTile.x = prevTile.x
-          currentTile.y = prevTile.y
-          prevTile.update = 'value'
-          currentTile.update = 'delete'
-
-          updated[currentTile.id] = { ...currentTile }
-          updated[prevTile.id] = prevTile
-          rowArr[j] = 0
-        }
-
-        if (currentTile.update === 'delete') {
-          continue
-        }
-
-        const position = checkFreeSlot(currentTile.x, currentTile.y, rowArr)
-
-        if (position[0] != currentTile.x || position[1] != currentTile.y) {
-          currentTile.x = position[0]
-          currentTile.y = position[1]
-          updated[currentTile.id] = { ...currentTile }
-        }
-
-        prevTile = currentTile
-      }
+    const getRowOrColumn: GetRowOrColumnFn = (tileMap, i) => {
+      const arr = tileMap.slice(i * 4, i * 4 + 4)
+      arr.reverse()
+      return arr
     }
 
-    if (Object.keys(updated).length) {
-      dispatch({ type: 'MOVE_TILE', payload: updated })
-
-      setTimeout(() => {
-        dispatch({ type: 'UPDATE_TILE' })
-        dispatch({ type: 'END_MOVE' })
-      }, 125)
-    } else {
-      dispatch({ type: 'END_MOVE' })
-    }
-
-    // setTiles([...tiles])
-    // console.log(tileMap)
-  }, [tiles])
+    move(getRowOrColumn, checkFreeSlot)
+  }, [move])
 
   const moveLeft = useCallback(() => {
-    // if (stateChanging) {
-    //   return
-    // }
-    // console.log('left', tiles)
-    dispatch({ type: 'START_MOVE' })
-    const updated = updateBoard(tiles)
-
-    const checkFreeSlot = (x, y, rowArr) => {
+    const checkFreeSlot: CheckFreeSlotFn = (x, y, rowArr) => {
       let newY = y
       for (let i = 0; i < y; i++) {
         if (rowArr[i] == 0) {
@@ -299,62 +205,13 @@ const useGame = () => {
       return [x, newY]
     }
 
-    const tileMap = Array(16).fill(0)
-    for (const tile of Object.values(updated)) {
-      const { x, y } = tile
-      tileMap[x * 4 + y] = tile
-    }
-    for (let i = 0; i < 4; i++) {
-      let prevTile
-      const rowArr = tileMap.slice(i * 4, i * 4 + 4)
-      for (let j = 0; j < 4; j++) {
-        const currentTile = tileMap[i * 4 + j]
-        if (currentTile == 0) {
-          continue
-        }
-        if (prevTile && prevTile.update !== 'delete' && prevTile.value === currentTile.value) {
-          currentTile.x = prevTile.x
-          currentTile.y = prevTile.y
-          prevTile.update = 'value'
-          currentTile.update = 'delete'
-
-          updated[currentTile.id] = { ...currentTile }
-          updated[prevTile.id] = prevTile
-          rowArr[j] = 0
-
-          // dispatch({ type: 'MERGE_TILE', payload: {
-          //   prev: prevTile,
-          //   current: currentTile,
-          // } })
-        }
-
-        if (currentTile.update === 'delete') {
-          continue
-        }
-
-        const position = checkFreeSlot(currentTile.x, currentTile.y, rowArr)
-
-        if (position[0] != currentTile.x || position[1] != currentTile.y) {
-          currentTile.x = position[0]
-          currentTile.y = position[1]
-          updated[currentTile.id] = { ...currentTile }
-        }
-
-        prevTile = currentTile
-      }
+    const getRowOrColumn: GetRowOrColumnFn = (tileMap, i) => {
+      const arr = tileMap.slice(i * 4, i * 4 + 4)
+      return arr
     }
 
-    if (Object.keys(updated).length) {
-      dispatch({ type: 'MOVE_TILE', payload: updated })
-
-      setTimeout(() => {
-        dispatch({ type: 'UPDATE_TILE' })
-        dispatch({ type: 'END_MOVE' })
-      }, 125)
-    } else {
-      dispatch({ type: 'END_MOVE' })
-    }
-  }, [tiles])
+    move(getRowOrColumn, checkFreeSlot)
+  }, [move])
 
   const start = useCallback(() => {
     dispatch({ type: 'EMPTY_BOARD' })

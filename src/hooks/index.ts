@@ -1,5 +1,3 @@
-import useGame from "./useGame"
+import useGame from './useGame'
 
-export {
-  useGame
-}
+export { useGame }

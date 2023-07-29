@@ -12,4 +12,4 @@ type Board = {
   [id: number]: Tile
 }
 
-export { Tile, Board }
+export type { Tile, Board }
