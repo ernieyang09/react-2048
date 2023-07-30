@@ -35,9 +35,10 @@ const useGame = () => {
   const [state, dispatch] = useReducer(reducer, initState)
   const [suspend, setSuspend] = useState(false)
   const { tiles, stateChanging } = state
+  const [score, setScore] = useState(0)
   const boardRef = useRef(tiles)
 
-  const score = Object.values(tiles).reduce((s, c) => s + c.value, 0)
+  // const score = Object.values(tiles).reduce((s, c) => s + c.value, 0)
   const gameStatus = stateChanging ? GameStatus.RUNNING : checkBoard(tiles)
 
   useEffect(() => {
@@ -69,6 +70,8 @@ const useGame = () => {
         tileArr[x * 4 + y] = tile
       }
 
+      let currentScore = score
+
       for (let i = 0; i < 4; i++) {
         let prevTile
         const rowArr = getRowOrColumn(tileArr, i)
@@ -86,6 +89,7 @@ const useGame = () => {
             updated[currentTile.id] = currentTile
             updated[prevTile.id] = prevTile
             rowArr[j] = 0
+            currentScore += prevTile.value * 2
           }
 
           if (currentTile.update !== 'delete') {
@@ -101,6 +105,8 @@ const useGame = () => {
           prevTile = currentTile
         }
       }
+
+      setScore(currentScore)
 
       if (Object.keys(updated).length) {
         dispatch({ type: 'MOVE_TILE', payload: updated })
